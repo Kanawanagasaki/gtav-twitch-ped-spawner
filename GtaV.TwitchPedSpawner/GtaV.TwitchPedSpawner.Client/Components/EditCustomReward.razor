@@ -1,0 +1,73 @@
+﻿@{
+    var rewardType = Reward.Type switch
+    {
+        Shared.ERewardType.PedReplacement => "Ped Replacement",
+        Shared.ERewardType.Paparazzi => "Paparazzi",
+        Shared.ERewardType.Companion => "Companion",
+        _ => ""
+    };
+}
+
+@if(_req is not null)
+{
+    <div class="root">
+        <div class="panel">
+            <h2>
+                Edit @rewardType
+            </h2>
+
+            <div>Title</div>
+            <input type="text" @bind=@(_req.title) />
+
+            <div>Cost</div>
+            <input type="number" @bind=@(_req.cost) />
+
+            <div>User input</div>
+            <button @onclick=@(()=>_req.is_user_input_required = !_req.is_user_input_required)>
+                @(_req.is_user_input_required ? "Disable" : "Enable")
+            </button>
+            @if(_req.is_user_input_required)
+            {
+                <div>Prompt</div>
+                <input type="text" @bind=@(_req.prompt) />
+            }
+
+            <div>Background color</div>
+            <input type="color" @bind=@(_req.background_color) />
+
+            <div>Global cooldown</div>
+            <button @onclick=@(()=>_req.is_global_cooldown_enabled = !_req.is_global_cooldown_enabled)>
+                @(_req.is_global_cooldown_enabled ? "Disable" : "Enable")
+            </button>
+            @if (_req.is_global_cooldown_enabled)
+            {
+                <div>Global cooldown seconds</div>
+                <input type="number" @bind=@(_req.global_cooldown_seconds) />
+            }
+
+            <div>Max per stream</div>
+            <button @onclick=@(()=>_req.is_max_per_stream_enabled = !_req.is_max_per_stream_enabled)>
+                @(_req.is_max_per_stream_enabled ? "Disable" : "Enable")
+            </button>
+            @if (_req.is_max_per_stream_enabled)
+            {
+                <input type="number" @bind=@(_req.max_per_stream) />
+            }
+
+            <div>Max per user per stream </div>
+            <button @onclick=@(()=>_req.is_max_per_user_per_stream_enabled = !_req.is_max_per_user_per_stream_enabled)>
+                @(_req.is_max_per_user_per_stream_enabled ? "Disable" : "Enable")
+            </button>
+            @if (_req.is_max_per_user_per_stream_enabled)
+            {
+                <input type="number" @bind=@(_req.max_per_user_per_stream) />
+            }
+
+            <hr />
+
+            <button @onclick=@Save>
+                Save
+            </button>
+        </div>
+    </div>
+}
