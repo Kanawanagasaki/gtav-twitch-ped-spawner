@@ -98,14 +98,14 @@ namespace Rewards
 		{
 			if (shouldAnnounceConnection)
 			{
-				Game::ShowNotification("Twtich NPC Spawner: Connected");
+				Game::ShowNotification("Twitch NPC Spawner: Connected");
 				shouldAnnounceConnection = false;
 			}
 			state = STATE_RECEIVE_MESSAGE;
 		}
 		else
 		{
-			Game::ShowNotification("Twtich NPC Spawner: Failed to connected to EventSub");
+			Game::ShowNotification("Twitch NPC Spawner: Failed to connected to EventSub");
 			shouldReconnect = false;
 			state = STATE_CLOSE;
 		}
@@ -209,7 +209,7 @@ namespace Rewards
 			state = STATE_SYNC_REWARDS;
 			break;
 		case Auth::eValidationStatus::Unauthorised:
-			Game::ShowNotification("Twtich NPC Spawner: Authorization required");
+			Game::ShowNotification("Twitch NPC Spawner: Authorization required");
 			state = STATE_DISCONNECTED;
 			break;
 		}
@@ -234,7 +234,7 @@ namespace Rewards
 			state = STATE_CONNECT;
 		else
 		{
-			Game::ShowNotification("Twtich NPC Spawner: Failed to synchronize rewards");
+			Game::ShowNotification("Twitch NPC Spawner: Failed to synchronize rewards");
 			state = STATE_DISCONNECTED;
 		}
 	}
@@ -338,7 +338,7 @@ namespace Rewards
 			state = STATE_VALIDATE_JWT;
 		else
 		{
-			Game::ShowNotification("Twtich NPC Spawner: Disconnected");
+			Game::ShowNotification("Twitch NPC Spawner: Disconnected");
 			state = STATE_DISCONNECTED;
 
 			shouldAnnounceConnection = true;
@@ -372,7 +372,7 @@ namespace Rewards
 		}
 		catch (...)
 		{
-			Game::ShowNotification("Twtich NPC Spawner: Internal error, disconnected");
+			Game::ShowNotification("Twitch NPC Spawner: Internal error, disconnected");
 
 			if (client != nullptr)
 				delete client;

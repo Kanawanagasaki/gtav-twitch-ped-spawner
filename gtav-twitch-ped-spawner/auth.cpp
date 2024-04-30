@@ -59,7 +59,7 @@ namespace Auth
 		std::ofstream outputFile(filename, std::ios::binary | std::ios::out);
 		if (!outputFile)
 		{
-			Game::ShowNotification("Twtich NPC Spawner: Save failed");
+			Game::ShowNotification("Twitch NPC Spawner: Save failed");
 			return;
 		}
 
