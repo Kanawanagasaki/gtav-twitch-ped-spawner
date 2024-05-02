@@ -15,6 +15,7 @@ NamedPedType2::NamedPedType2(Ped handle, std::string viewerId, std::string nickn
 	PED::SET_RAGDOLL_BLOCKING_FLAGS(handle, 5);
 
 	PED::SET_PED_AS_GROUP_MEMBER(handle, PLAYER::GET_PLAYER_GROUP(PLAYER::PLAYER_ID()));
+	PED::SET_PED_NEVER_LEAVES_GROUP(handle, true);
 	PED::SET_PED_COMBAT_ATTRIBUTES(handle, 5, true);
 	PED::SET_PED_COMBAT_ATTRIBUTES(handle, 46, true);
 	PED::SET_PED_ACCURACY(handle, 100);
@@ -46,6 +47,53 @@ void NamedPedType2::Tick()
 	}
 
 	auto plPed = PLAYER::PLAYER_PED_ID();
+	auto distSq = Game::DistanceSq(plPed, handle);
+
+	if (250000.0f < distSq)
+	{
+		auto plPos = ENTITY::GET_ENTITY_COORDS(plPed, true);
+
+		Vector3 camPos = CAM::GET_GAMEPLAY_CAM_COORD();
+		Vector3 camRot = CAM::GET_GAMEPLAY_CAM_ROT(2);
+
+		float pitch = camRot.x / 180.0f * 3.14159265f;
+		float yaw = (camRot.z + 90.0f) / 180.0f * 3.14159265f;
+
+		auto vx = cos(yaw) * cos(pitch);
+		auto vy = sin(yaw) * cos(pitch);
+
+		auto len = sqrt(vx * vx + vy * vy);
+
+		auto nx = vx / len;
+		auto ny = vy / len;
+
+		auto spotX = plPos.x - nx * 100.0f;
+		auto spotY = plPos.y - ny * 100.0f;
+		auto spotZ = PATHFIND::GET_APPROX_FLOOR_FOR_POINT(spotX, spotY) + 1.0f;
+		float groundZ;
+		if (MISC::GET_GROUND_Z_FOR_3D_COORD(spotX, spotY, spotZ, &groundZ, true, true) && 0.0f < groundZ)
+			spotZ = groundZ;
+
+		Vector3 node;
+		if (PATHFIND::GET_NTH_CLOSEST_VEHICLE_NODE(spotX, spotY, spotZ, 1, &node, 1, 3.0f, 0.0f))
+		{
+			spotX = node.x;
+			spotY = node.y;
+			spotZ = node.z + 1.0f;
+
+			if (PATHFIND::GET_SAFE_COORD_FOR_PED(spotX, spotY, spotZ, true, &node, 0))
+			{
+				spotX = node.x;
+				spotY = node.y;
+				spotZ = node.z + 1.0f;
+			}
+		}
+
+		ENTITY::SET_ENTITY_COORDS_NO_OFFSET(handle, spotX, spotY, spotZ, true, true, true);
+		TASK::CLEAR_PED_TASKS_IMMEDIATELY(handle);
+		TASK::TASK_GO_TO_ENTITY(handle, plPed, -1, 5.0f, 4.0f, 10.0f, 0);
+	}
+	
 	if (PED::IS_PED_IN_ANY_VEHICLE(plPed, true))
 	{
 		auto plGroup = PLAYER::GET_PLAYER_GROUP(PLAYER::PLAYER_ID());

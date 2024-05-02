@@ -243,3 +243,9 @@ void NamedPedType1::Tick()
 	case eState::Follow: ProcessFollow(); break;
 	}
 }
+
+NamedPedType1::~NamedPedType1()
+{
+	if (ENTITY::DOES_ENTITY_EXIST(camera))
+		ENTITY::DELETE_ENTITY(&camera);
+}

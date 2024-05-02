@@ -38,4 +38,6 @@ public:
 	bool ShouldDelete() override;
 
 	void Tick() override;
+
+	~NamedPedType1() override;
 };

@@ -28,5 +28,5 @@ public:
 
 	virtual void Tick();
 
-	~NamedPed();
+	virtual ~NamedPed();
 };
