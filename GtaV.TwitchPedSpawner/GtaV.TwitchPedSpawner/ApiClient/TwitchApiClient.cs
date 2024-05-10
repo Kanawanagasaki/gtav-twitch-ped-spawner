@@ -39,6 +39,13 @@ public class TwitchApiClient(HttpClient _http)
     public Task<int> DeleteCustomReward(UserEntity user, string rewardId)
         => Delete(user, $"helix/channel_points/custom_rewards?broadcaster_id={user.TwitchId}&id={rewardId}");
 
+    public Task<TwitchApiResponse<Redemption>?> GetRedemption(UserEntity user, string rewardId, string redemptionId)
+       => Get<Redemption>
+       (
+           user,
+           $"helix/channel_points/custom_rewards/redemptions?broadcaster_id={user.TwitchId}&reward_id={rewardId}&status=UNFULFILLED&id={redemptionId}"
+       );
+
     public Task<TwitchApiResponse<Redemption>?> GetFirstUnfulfilledRedemption(UserEntity user, string rewardId)
         => Get<Redemption>
         (

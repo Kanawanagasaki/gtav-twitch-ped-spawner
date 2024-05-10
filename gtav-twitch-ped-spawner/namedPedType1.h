@@ -1,6 +1,7 @@
 #pragma once
 
 #include "namedPed.h"
+#include "game.h"
 
 class NamedPedType1 : public NamedPed
 {
@@ -32,6 +33,8 @@ private:
 	void ProcessCameraExit();
 	void ProcessFollow();
 
+	static bool FindSpot(Vector3* spot);
+
 public:
 	NamedPedType1(Ped handle, std::string viewerId, std::string nickname);
 
@@ -40,4 +43,6 @@ public:
 	void Tick() override;
 
 	~NamedPedType1() override;
+
+	static bool TryCreate(Game::Redemption* redemption, NamedPed** res);
 };

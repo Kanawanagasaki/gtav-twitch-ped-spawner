@@ -7,9 +7,10 @@ using GtaV.TwitchPedSpawner.Entities;
 using GtaV.TwitchPedSpawner.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 [ApiController, Route("[controller]")]
-public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi, MySqlContext _db) : Controller
+public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi, MySqlContext _db, IConfiguration _conf) : Controller
 {
     [HttpGet("[action]")]
     public async Task<IActionResult> Sync()
@@ -56,9 +57,9 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
                 },
                 Cost = type switch
                 {
-                    ERewardType.PedReplacement => 50_000,
-                    ERewardType.Paparazzi => 150_000,
-                    ERewardType.Companion => 500_000,
+                    ERewardType.PedReplacement => 5_000,
+                    ERewardType.Paparazzi => 15_000,
+                    ERewardType.Companion => 50_000,
                     _ => 999_999_999
                 },
                 BackgroundColor = type switch
@@ -78,6 +79,13 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
         await _db.SaveChangesAsync();
 
         var remoteRewards = await _twitchApi.GetCustomRewardsList(user);
+        if (remoteRewards is not null && !remoteRewards.IsSuccessStatusCode)
+        {
+            if (await TryRefreshToken(user))
+                remoteRewards = await _twitchApi.GetCustomRewardsList(user);
+            else
+                return StatusCode(remoteRewards.StatusCode);
+        }
         if (remoteRewards is null)
             return StatusCode(StatusCodes.Status500InternalServerError);
         if (!remoteRewards.IsSuccessStatusCode)
@@ -122,8 +130,18 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
 
         // Remove remote rewards that is not in local database
         foreach (var remoteReward in remoteRewards.data)
+        {
             if (!localRewards.Any(x => x.TwitchId == remoteReward.id))
                 await _twitchApi.DeleteCustomReward(user, remoteReward.id);
+            else
+            {
+                var req = remoteReward.ToReq();
+                req.is_paused = false;
+                req.is_enabled = true;
+
+                await _twitchApi.UpdateCustomReward(user, remoteReward.id, req);
+            }
+        }
 
         await _db.SaveChangesAsync();
 
@@ -140,6 +158,13 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
         var localRewards = await _db.Rewards.Where(x => x.UserId == user.Id).ToArrayAsync();
 
         var remoteRewards = await _twitchApi.GetCustomRewardsList(user);
+        if (remoteRewards is not null && !remoteRewards.IsSuccessStatusCode)
+        {
+            if (await TryRefreshToken(user))
+                remoteRewards = await _twitchApi.GetCustomRewardsList(user);
+            else
+                return StatusCode(remoteRewards.StatusCode);
+        }
         if (remoteRewards is null)
             return StatusCode(StatusCodes.Status500InternalServerError);
         if (!remoteRewards.IsSuccessStatusCode)
@@ -201,6 +226,13 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
             return StatusCode(StatusCodes.Status500InternalServerError);
 
         var remoteRewardRes = await _twitchApi.UpdateCustomReward(user, localReward.TwitchId, req);
+        if (remoteRewardRes is not null && !remoteRewardRes.IsSuccessStatusCode)
+        {
+            if (await TryRefreshToken(user))
+                remoteRewardRes = await _twitchApi.UpdateCustomReward(user, localReward.TwitchId, req);
+            else
+                return StatusCode(remoteRewardRes.StatusCode);
+        }
         if (remoteRewardRes is null)
             return StatusCode(StatusCodes.Status500InternalServerError);
         if (!remoteRewardRes.IsSuccessStatusCode)
@@ -328,12 +360,27 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
                 continue;
 
             var res = await _twitchApi.GetFirstUnfulfilledRedemption(user, localReward.TwitchId);
+            if (res is not null && !res.IsSuccessStatusCode)
+            {
+                if (await TryRefreshToken(user))
+                    res = await _twitchApi.GetFirstUnfulfilledRedemption(user, localReward.TwitchId);
+                else
+                    return StatusCode(res.StatusCode);
+            }
             if (res is not null && res.IsSuccessStatusCode && 0 < res.data.Length)
             {
                 res.data[0].reward_type = localReward.Type;
                 redemptions.Add(res.data[0]);
             }
         }
+
+        var nowEpoch = (long)(DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch).TotalSeconds;
+        var heartbeat = await _db.HeartBeats.FirstOrDefaultAsync(x => x.UserId == user.Id);
+        if (heartbeat is null)
+            _db.HeartBeats.Add(new() { UserId = user.Id, LastBeatSec = nowEpoch });
+        else
+            heartbeat.LastBeatSec = nowEpoch;
+        await _db.SaveChangesAsync();
 
         if (redemptions.Count == 0)
             return StatusCode(StatusCodes.Status404NotFound);
@@ -371,5 +418,41 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
                 await _twitchApi.UpdateRedemptionStatus(user, reward.TwitchId, redemptionId, TwitchApiClient.ERedemptionStatus.CANCELED);
 
         return StatusCode(StatusCodes.Status204NoContent);
+    }
+
+    private record RefreshResult(string access_token, string refresh_token, string[] scope, string token_type);
+    private async Task<bool> TryRefreshToken(UserEntity user)
+    {
+        using var http = new HttpClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://id.twitch.tv/oauth2/validate");
+        request.Headers.Add("Authorization", "Bearer " + user.AccessToken);
+        using var response = await http.SendAsync(request);
+
+        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+        {
+            var form = new FormUrlEncodedContent(new Dictionary<string, string?>
+                {
+                    { "client_id", _conf["Twitch:ClientId"] },
+                    { "client_secret", _conf["Twitch:Secret"] },
+                    { "grant_type", "refresh_token" },
+                    { "refresh_token", user.RefreshToken }
+                });
+            using var request2 = new HttpRequestMessage(HttpMethod.Post, "https://id.twitch.tv/oauth2/token");
+            request2.Content = form;
+            using var response2 = await http.SendAsync(request2);
+            if (response2.StatusCode != System.Net.HttpStatusCode.OK)
+                return false;
+
+            var content = await response2.Content.ReadAsStringAsync();
+            var refreshRes = JsonSerializer.Deserialize<RefreshResult>(content);
+            if (refreshRes is null)
+                return false;
+
+            user.AccessToken = refreshRes.access_token;
+            user.RefreshToken = refreshRes.refresh_token;
+            await _db.SaveChangesAsync();
+        }
+
+        return true;
     }
 }

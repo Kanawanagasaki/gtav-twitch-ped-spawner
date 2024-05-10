@@ -16,10 +16,9 @@ namespace Game
 
 	std::unordered_map<Ped, NamedPed*> peds = {};
 	std::unordered_set<std::string> spawnedViewerIds = {};
-	std::queue<Ped> pedsQueue = {};
+	std::unordered_map<int, std::queue<Ped>*> pedsQueue = {};
 
 	std::unordered_set<Ped> companions = {};
-	Hash relationshipGroup = 0;
 
 	std::vector<Ped> pedsToDespawn = {};
 	bool shouldDespawnAllPeds = false;
@@ -50,9 +49,9 @@ namespace Game
 		return vx * vx + vy * vy + vz * vz;
 	}
 
-	std::unordered_map<Ped, NamedPed*> GetSpawnedPeds()
+	std::unordered_map<Ped, NamedPed*>* GetSpawnedPeds()
 	{
-		return peds;
+		return &peds;
 	}
 	int GetSpawnedPedsCount()
 	{
@@ -71,183 +70,9 @@ namespace Game
 	{
 		return companions;
 	}
-	Hash GetNamedPedType2Group()
-	{
-		if (relationshipGroup == 0)
-		{
-			PED::ADD_RELATIONSHIP_GROUP("_NAMED_PED_TYPE_2", &relationshipGroup);
-			PED::SET_RELATIONSHIP_BETWEEN_GROUPS(0, relationshipGroup, Util::GetHashKey("PLAYER"));
-			PED::SET_RELATIONSHIP_BETWEEN_GROUPS(0, Util::GetHashKey("PLAYER"), relationshipGroup);
-		}
-		return relationshipGroup;
-	}
 
-	bool TryProcessType0()
-	{
-		auto plPed = PLAYER::PLAYER_PED_ID();
-
-		if (PED::IS_PED_IN_ANY_VEHICLE(plPed, true))
-			return false;
-
-		for (const auto& ped : EntityIterator::GetAllPeds())
-		{
-			if (plPed == ped)
-				continue;
-			if (ENTITY::IS_ENTITY_DEAD(ped, false))
-				continue;
-			if (PED::IS_PED_IN_ANY_VEHICLE(ped, true))
-				continue;
-			if (peds.contains(ped))
-				continue;
-			auto pedType = PED::GET_PED_TYPE(ped);
-			if (pedType != 4 && pedType != 5)
-				continue;
-			if (ENTITY::IS_ENTITY_A_MISSION_ENTITY(ped))
-				continue;
-
-			auto distSq = DistanceSq(plPed, ped);
-
-			if (35.0f < distSq)
-				continue;
-
-			auto model = ENTITY::GET_ENTITY_MODEL(ped);
-			Vector3 min;
-			Vector3 max;
-			MISC::GET_MODEL_DIMENSIONS(model, &min, &max);
-
-			auto pedPos = ENTITY::GET_ENTITY_COORDS(ped, true);
-			float worldZ = pedPos.z + max.z / 2.0f;
-			float screenX;
-			float screenY;
-			if (!GRAPHICS::GET_SCREEN_COORD_FROM_WORLD_COORD(pedPos.x, pedPos.y, worldZ, &screenX, &screenY))
-				continue;
-
-			auto redemption = redemptions[0];
-			peds[ped] = new NamedPedType0(ped, redemption->userId, redemption->userName);
-
-			ShowNotification(redemption->userName + " waves hello");
-
-			return true;
-		}
-
-		return false;
-	}
-
-	bool FindSpot(Vector3* spot)
-	{
-		Vector3 camPos = CAM::GET_GAMEPLAY_CAM_COORD();
-		Vector3 camRot = CAM::GET_GAMEPLAY_CAM_ROT(2);
-
-		float pitch = camRot.x / 180.0f * 3.14159265f;
-		float yaw = (camRot.z + 90.0f) / 180.0f * 3.14159265f;
-
-		auto vx = cos(yaw) * cos(pitch);
-		auto vy = sin(yaw) * cos(pitch);
-
-		auto len = sqrt(vx * vx + vy * vy);
-
-		auto nx = vx / len;
-		auto ny = vy / len;
-
-		auto plPed = PLAYER::PLAYER_PED_ID();
-		auto plPos = ENTITY::GET_ENTITY_COORDS(plPed, true);
-		auto spotX = plPos.x - nx * 10.0f;
-		auto spotY = plPos.y - ny * 10.0f;
-		auto spotZ = plPos.z + 10.0f;
-
-		float groundZ;
-		if (!MISC::GET_GROUND_Z_FOR_3D_COORD(spotX, spotY, spotZ, &groundZ, true, true))
-			return false;
-		if (groundZ == 0.0f)
-			return false;
-		if (7.0f < abs(plPos.z - groundZ))
-			return false;
-
-		groundZ += 1.0f;
-
-		auto rayX = plPos.x - nx * 15.0f;
-		auto rayY = plPos.y - ny * 15.0f;
-		auto hRaycast = SHAPETEST::START_EXPENSIVE_SYNCHRONOUS_SHAPE_TEST_LOS_PROBE(camPos.x, camPos.y, camPos.z, rayX, rayY, groundZ, 0x1FF, plPed, 7);
-
-		BOOL hits;
-		Vector3 hitRes;
-		Vector3 surfaceNormal;
-		Entity hitEntity;
-		if (SHAPETEST::GET_SHAPE_TEST_RESULT(hRaycast, &hits, &hitRes, &surfaceNormal, &hitEntity) == 2 && hits)
-			return false;
-
-		spot->x = spotX;
-		spot->y = spotY;
-		spot->z = groundZ;
-
-		return true;
-	}
-
-	bool TryProcessType1()
-	{
-		auto plPed = PLAYER::PLAYER_PED_ID();
-		if (PED::IS_PED_IN_ANY_VEHICLE(plPed, true))
-			return false;
-
-		Vector3 spot = {};
-		if (!FindSpot(&spot))
-			return false;
-
-		auto ped = PED::CREATE_RANDOM_PED(spot.x, spot.y, spot.z);
-
-		auto redemption = redemptions[1];
-		peds[ped] = new NamedPedType1(ped, redemption->userId, redemption->userName);
-		pedsQueue.push(ped);
-
-		auto pronounce = PED::GET_PED_TYPE(ped) == 5 ? "her" : "his";
-		ShowNotification(redemption->userName + " prepared " + pronounce + " camera");
-
-		return true;
-	}
-
-	bool TryProcessType2()
-	{
-		auto redemption = redemptions[2];
-		auto plPed = PLAYER::PLAYER_PED_ID();
-		if (PED::IS_PED_IN_ANY_VEHICLE(plPed, false))
-		{
-			auto veh = PED::GET_VEHICLE_PED_IS_IN(plPed, false);
-
-			for (int i = 0; i <= 2; i++)
-			{
-				if (!VEHICLE::IS_VEHICLE_SEAT_FREE(veh, i, true))
-					continue;
-
-				auto ped = PED::CREATE_RANDOM_PED(0, 0, 0);
-				PED::SET_PED_INTO_VEHICLE(ped, veh, i);
-				peds[ped] = new NamedPedType2(ped, redemption->userId, redemption->userName);
-				pedsQueue.push(ped);
-
-				ShowNotification(redemption->userName + " ready to fight");
-
-				return true;
-			}
-
-			return false;
-		}
-		else
-		{
-			Vector3 spot = {};
-			if (!FindSpot(&spot))
-				return false;
-
-			auto ped = PED::CREATE_RANDOM_PED(spot.x, spot.y, spot.z);
-			peds[ped] = new NamedPedType2(ped, redemption->userId, redemption->userName);
-			pedsQueue.push(ped);
-
-			ShowNotification(redemption->userName + " ready to fight");
-
-			return true;
-		}
-	}
-
-	typedef bool (*TryProcess)();
-	TryProcess processFuncs[] = { TryProcessType0, TryProcessType1, TryProcessType2 };
+	typedef bool (*TryCreate)(Redemption*, NamedPed**);
+	TryCreate createFuncs[] = { NamedPedType0::TryCreate, NamedPedType1::TryCreate, NamedPedType2::TryCreate };
 	void Tick()
 	{
 		companions.clear();
@@ -259,30 +84,38 @@ namespace Game
 				continue;
 			if (peds.contains(ped))
 				continue;
-			if (PED::IS_PED_GROUP_MEMBER(ped, plGroup))
+			if (PED::IS_PED_GROUP_MEMBER(ped, plGroup) || PED::GET_RELATIONSHIP_BETWEEN_PEDS(ped, plPed) <= 2)
 				companions.insert(ped);
 		}
 
-		for (int i = 0; i <= 2; i++)
+		if (!HUD::IS_RADAR_HIDDEN())
 		{
-			if (!redemptions.contains(i))
-				continue;
-
-			auto redemption = redemptions[i];
-			if (spawnedViewerIds.contains(redemption->userId))
+			for (int i = 0; i <= 2; i++)
 			{
-				Rewards::Cancel(redemption);
+				if (!redemptions.contains(i))
+					continue;
 
-				delete redemption;
-				redemptions.erase(i);
-			}
-			else if (processFuncs[i]())
-			{
-				spawnedViewerIds.insert(redemption->userId);
-				Rewards::Fulfill(redemption);
+				auto redemption = redemptions[i];
+				NamedPed* namedPed;
+				if (spawnedViewerIds.contains(redemption->userId))
+				{
+					Rewards::Cancel(redemption);
 
-				delete redemption;
-				redemptions.erase(i);
+					delete redemption;
+					redemptions.erase(i);
+				}
+				else if (createFuncs[i](redemption, &namedPed))
+				{
+					peds[namedPed->GetHandle()] = namedPed;
+					if (!pedsQueue.contains(i))
+						pedsQueue[i] = new std::queue<Ped>;
+					pedsQueue[i]->push(namedPed->GetHandle());
+					spawnedViewerIds.insert(redemption->userId);
+					Rewards::Fulfill(redemption);
+
+					delete redemption;
+					redemptions.erase(i);
+				}
 			}
 		}
 
@@ -302,32 +135,48 @@ namespace Game
 			}
 		}
 
-		if (0 < pedsQueue.size() && !ENTITY::DOES_ENTITY_EXIST(pedsQueue.front()))
+		for (int i = 0; i <= 2; i++)
 		{
-			auto ped = pedsQueue.front();
-			if (peds.contains(ped))
+			if (!pedsQueue.contains(i))
+				continue;
+			auto queue = pedsQueue[i];
+			if (queue->size() == 0)
+				continue;
+			auto frontPed = queue->front();
+			if (ENTITY::DOES_ENTITY_EXIST(frontPed))
+				continue;
+
+			if (peds.contains(frontPed))
 			{
-				auto namedPed = peds[ped];
+				auto namedPed = peds[frontPed];
 				spawnedViewerIds.erase(namedPed->GetViewerId());
 
 				delete namedPed;
-				peds.erase(ped);
+				peds.erase(frontPed);
 			}
-			pedsQueue.pop();
+			queue->pop();
+
 		}
 
-		while (15 < pedsQueue.size())
+		for (int i = 0; i <= 2; i++)
 		{
-			auto ped = pedsQueue.front();
-			if (peds.contains(ped))
-			{
-				auto namedPed = peds[ped];
-				spawnedViewerIds.erase(namedPed->GetViewerId());
+			if (!pedsQueue.contains(i))
+				continue;
 
-				delete namedPed;
-				peds.erase(ped);
+			auto queue = pedsQueue[i];
+			while ((i == 2 ? 2 : 4) < queue->size())
+			{
+				auto ped = queue->front();
+				if (peds.contains(ped))
+				{
+					auto namedPed = peds[ped];
+					spawnedViewerIds.erase(namedPed->GetViewerId());
+
+					delete namedPed;
+					peds.erase(ped);
+				}
+				queue->pop();
 			}
-			pedsQueue.pop();
 		}
 
 		if (0 < pedsToDespawn.size())

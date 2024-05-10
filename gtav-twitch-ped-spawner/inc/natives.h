@@ -4152,7 +4152,7 @@ namespace PED
 	static BOOL IS_PED_IN_GROUP(Ped ped) { return invoke<BOOL>(0x5891CAC5D4ACFF74, ped); } // 0x5891CAC5D4ACFF74 0x836D9795 b323
 	static Player GET_PLAYER_PED_IS_FOLLOWING(Ped ped) { return invoke<Player>(0x6A3975DEA89F9A17, ped); } // 0x6A3975DEA89F9A17 0xDE7442EE b323
 	static void SET_GROUP_FORMATION(int groupId, int formationType) { invoke<Void>(0xCE2F5FC3AF7E8C1E, groupId, formationType); } // 0xCE2F5FC3AF7E8C1E 0x08FAC739 b323
-	static void SET_GROUP_FORMATION_SPACING(int groupId, float x, float y, float z) { invoke<Void>(0x1D9D45004C28C916, groupId, x, y, z); } // 0x1D9D45004C28C916 0xB1E086FF b323
+	static void SET_GROUP_FORMATION_SPACING(int groupId, float FormationSpacing, float AdjustSpeedMinDist, float AdjustSpeedMaxDist) { invoke<Void>(0x1D9D45004C28C916, groupId, FormationSpacing, AdjustSpeedMinDist, AdjustSpeedMaxDist); } // 0x1D9D45004C28C916 0xB1E086FF b323
 	static void RESET_GROUP_FORMATION_DEFAULT_SPACING(int groupHandle) { invoke<Void>(0x63DAB4CCB3273205, groupHandle); } // 0x63DAB4CCB3273205 0x267FCEAD b323
 	static Vehicle GET_VEHICLE_PED_IS_USING(Ped ped) { return invoke<Vehicle>(0x6094AD011A2EA87D, ped); } // 0x6094AD011A2EA87D 0x6DE3AADA b323
 	static Vehicle GET_VEHICLE_PED_IS_ENTERING(Ped ped) { return invoke<Vehicle>(0xF92691AED837A5FC, ped); } // 0xF92691AED837A5FC 0x56E0C163 b323

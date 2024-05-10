@@ -1,4 +1,5 @@
 #include "namedPedType0.h"
+#include "entityIterator.h"
 #include "util.h"
 #include "inc/main.h"
 
@@ -56,7 +57,7 @@ void NamedPedType0::Tick()
 	if (!LoadAnimDict(animDict))
 		return;
 
-	if (distSq < 60.0f)
+	if (distSq < 100.0f)
 	{
 		if (!isNextToPlayer)
 		{
@@ -87,4 +88,58 @@ void NamedPedType0::Tick()
 
 		isNextToPlayer = false;
 	}
+}
+
+bool NamedPedType0::TryCreate(Game::Redemption* redemption, NamedPed** res)
+{
+	auto plPed = PLAYER::PLAYER_PED_ID();
+
+	if (PED::IS_PED_IN_ANY_VEHICLE(plPed, true))
+	{
+		auto veh = PED::GET_VEHICLE_PED_IS_IN(plPed, true);
+		if (3.0f < ENTITY::GET_ENTITY_SPEED(veh))
+			return false;
+	}
+
+	for (const auto& ped : EntityIterator::GetAllPeds())
+	{
+		if (plPed == ped)
+			continue;
+		if (ENTITY::IS_ENTITY_DEAD(ped, false))
+			continue;
+		if (PED::IS_PED_IN_ANY_VEHICLE(ped, true))
+			continue;
+		if (Game::GetSpawnedPeds()->contains(ped))
+			continue;
+		auto pedType = PED::GET_PED_TYPE(ped);
+		if (pedType != 4 && pedType != 5)
+			continue;
+		if (ENTITY::IS_ENTITY_A_MISSION_ENTITY(ped))
+			continue;
+
+		auto distSq = Game::DistanceSq(plPed, ped);
+
+		if (100.0f < distSq)
+			continue;
+
+		auto model = ENTITY::GET_ENTITY_MODEL(ped);
+		Vector3 min;
+		Vector3 max;
+		MISC::GET_MODEL_DIMENSIONS(model, &min, &max);
+
+		auto pedPos = ENTITY::GET_ENTITY_COORDS(ped, true);
+		float worldZ = pedPos.z + max.z / 2.0f;
+		float screenX;
+		float screenY;
+		if (!GRAPHICS::GET_SCREEN_COORD_FROM_WORLD_COORD(pedPos.x, pedPos.y, worldZ, &screenX, &screenY))
+			continue;
+
+		*res = new NamedPedType0(ped, redemption->userId, redemption->userName);
+
+		Game::ShowNotification(redemption->userName + " waves hello");
+
+		return true;
+	}
+
+	return false;
 }

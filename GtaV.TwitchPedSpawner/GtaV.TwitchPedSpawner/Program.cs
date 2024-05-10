@@ -17,6 +17,9 @@ builder.Services.AddHttpClient<TwitchApiClient>("TwitchApi", (http) =>
     http.DefaultRequestHeaders.Add("Client-Id", builder.Configuration["Twitch:ClientId"]);
 });
 
+builder.Services.AddSingleton<HeartBeatService>();
+builder.Services.AddHostedService(x => x.GetRequiredService<HeartBeatService>());
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

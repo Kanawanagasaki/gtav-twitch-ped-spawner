@@ -64,14 +64,15 @@ namespace LocalServer
 				case Auth::eValidationStatus::Unauthorised: status = json::value::string(U("unauthorized")); break;
 				}
 
-				std::vector<json::value> spawnedPeds;
-				for (const auto& pair : Game::GetSpawnedPeds())
+				std::vector<json::value> spawnedPedsJson;
+				auto spawnedPeds = Game::GetSpawnedPeds();
+				for (const auto& pair : *spawnedPeds)
 				{
 					json::value spawnedPed;
 					spawnedPed[U("handle")] = json::value::number(pair.first);
 					spawnedPed[U("viewerId")] = json::value::string(to_string_t(pair.second->GetViewerId()));
 					spawnedPed[U("nickname")] = json::value::string(to_string_t(pair.second->GetNickname()));
-					spawnedPeds.push_back(spawnedPed);
+					spawnedPedsJson.push_back(spawnedPed);
 				}
 
 				json::value eventSub;
@@ -84,7 +85,7 @@ namespace LocalServer
 				AddCORS(response);
 				json::value json;
 				json[U("status")] = status;
-				json[U("spawnedPeds")] = json::value::array(spawnedPeds);
+				json[U("spawnedPeds")] = json::value::array(spawnedPedsJson);
 				json[U("eventSub")] = eventSub;
 				response.set_body(json);
 				request.reply(response);

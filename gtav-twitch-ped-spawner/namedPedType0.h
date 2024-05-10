@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game.h"
 #include "namedPed.h"
 
 class NamedPedType0 : public NamedPed
@@ -16,4 +17,6 @@ public:
 	bool ShouldDelete() override;
 
 	void Tick() override;
+
+	static bool TryCreate(Game::Redemption* redemption, NamedPed** res);
 };

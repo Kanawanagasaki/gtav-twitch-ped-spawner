@@ -17,11 +17,7 @@ public class AuthController(ILogger<AuthController> _logger, IConfiguration _con
     [HttpGet("[action]")]
     public async Task<IActionResult> Validate()
     {
-        if (string.IsNullOrEmpty(Request.Headers.Authorization))
-            return StatusCode(StatusCodes.Status401Unauthorized);
-
-        var jwt = Request.Headers.Authorization.ToString();
-        var user = await _jwtService.GetUser(jwt);
+        var user = await _jwtService.GetUser(Request.Headers.Authorization.ToString());
         if (user is null)
             return StatusCode(StatusCodes.Status401Unauthorized);
 

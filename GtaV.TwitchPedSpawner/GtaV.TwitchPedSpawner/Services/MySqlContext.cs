@@ -2,26 +2,27 @@
 
 using GtaV.TwitchPedSpawner.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 
 public class MySqlContext : DbContext
 {
     public required DbSet<UserEntity> Users { get; init; }
     public required DbSet<RewardEntity> Rewards { get; init; }
+    public required DbSet<HeartBeatEntity> HeartBeats { get; init; }
 
     private IConfiguration _config;
 
-    public MySqlContext(IConfiguration config)
+    public MySqlContext(IConfiguration config, ILogger<MySqlContext> logger)
     {
         _config = config;
 
-        Database.EnsureCreated();
         try
         {
             Database.Migrate();
         }
-        catch { }
+        catch (Exception e)
+        {
+            logger.LogWarning("Exception was thrown during migration:\n" + e.Message);
+        }
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

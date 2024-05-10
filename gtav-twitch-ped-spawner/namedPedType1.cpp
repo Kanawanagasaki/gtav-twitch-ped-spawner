@@ -1,5 +1,4 @@
 #include "namedPedType1.h"
-#include "game.h"
 #include "util.h"
 
 #include <vector>
@@ -25,7 +24,7 @@ NamedPedType1::NamedPedType1(Ped handle, std::string viewerId, std::string nickn
 
 	ENTITY::SET_ENTITY_AS_MISSION_ENTITY(handle, false, false);
 	TASK::CLEAR_PED_TASKS_IMMEDIATELY(handle);
-	TASK::TASK_GO_TO_ENTITY(handle, PLAYER::PLAYER_PED_ID(), -1, 3.0f, 1.0f, 5.0f, 0);
+	TASK::TASK_GO_TO_ENTITY(handle, PLAYER::PLAYER_PED_ID(), -1, 3.0f, 4.0f, 5.0f, 0);
 
 	PED::SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(handle, TRUE);
 	PED::SET_PED_FLEE_ATTRIBUTES(handle, 0, 0);
@@ -153,7 +152,7 @@ void NamedPedType1::ProcessCameraIdle()
 
 	auto distSq = vx * vx + vy * vy + vz * vz;
 
-	if (60.0f < distSq && distSq < 1600.0f)
+	if ((60.0f < distSq || 3.0f <= ENTITY::GET_ENTITY_SPEED(plPed)) && distSq < 2500.0f)
 	{
 		auto angle = std::atan2(vy, vx) / 3.14159f * 180.0f - 90.0f;
 		auto heading = ENTITY::GET_ENTITY_HEADING(handle);
@@ -218,11 +217,51 @@ void NamedPedType1::ProcessFollow()
 		stateChangeTime = MISC::GET_GAME_TIMER();
 	}
 
-	if (distSq < 400.0f)
+	if (distSq < 1600.0f)
 	{
 		TASK::CLEAR_PED_TASKS_IMMEDIATELY(handle);
 		SetState(eState::CameraEnter);
 		isFirstFollowTick = true;
+	}
+	else if (250000.0f < distSq)
+	{
+		Vector3 camPos = CAM::GET_GAMEPLAY_CAM_COORD();
+		Vector3 camRot = CAM::GET_GAMEPLAY_CAM_ROT(2);
+
+		float pitch = camRot.x / 180.0f * 3.14159265f;
+		float yaw = (camRot.z + 90.0f) / 180.0f * 3.14159265f;
+
+		auto vx = cos(yaw) * cos(pitch);
+		auto vy = sin(yaw) * cos(pitch);
+
+		auto len = sqrt(vx * vx + vy * vy);
+
+		auto nx = vx / len;
+		auto ny = vy / len;
+
+		auto spotX = plPos.x - nx * 50.0f;
+		auto spotY = plPos.y - ny * 50.0f;
+		auto spotZ = PATHFIND::GET_APPROX_FLOOR_FOR_POINT(spotX, spotY) + 1.0f;
+		float groundZ;
+		if (MISC::GET_GROUND_Z_FOR_3D_COORD(spotX, spotY, spotZ, &groundZ, true, true) && 0.0f < groundZ)
+			spotZ = groundZ;
+
+		Vector3 node;
+		if (PATHFIND::GET_NTH_CLOSEST_VEHICLE_NODE(spotX, spotY, spotZ, 1, &node, 1, 3.0f, 0.0f))
+		{
+			spotX = node.x;
+			spotY = node.y;
+			spotZ = node.z + 1.0f;
+
+			if (PATHFIND::GET_SAFE_COORD_FOR_PED(spotX, spotY, spotZ, true, &node, 0))
+			{
+				spotX = node.x;
+				spotY = node.y;
+				spotZ = node.z + 1.0f;
+			}
+		}
+
+		ENTITY::SET_ENTITY_COORDS_NO_OFFSET(handle, spotX, spotY, spotZ, true, true, true);
 	}
 }
 
@@ -248,4 +287,73 @@ NamedPedType1::~NamedPedType1()
 {
 	if (ENTITY::DOES_ENTITY_EXIST(camera))
 		ENTITY::DELETE_ENTITY(&camera);
+}
+
+bool NamedPedType1::FindSpot(Vector3* spot)
+{
+	Vector3 camPos = CAM::GET_FINAL_RENDERED_CAM_COORD();
+	Vector3 camRot = CAM::GET_FINAL_RENDERED_CAM_ROT(2);
+
+	float pitch = camRot.x / 180.0f * 3.14159265f;
+	float yaw = (camRot.z + 90.0f) / 180.0f * 3.14159265f;
+
+	auto vx = cos(yaw) * cos(pitch);
+	auto vy = sin(yaw) * cos(pitch);
+
+	auto len = sqrt(vx * vx + vy * vy);
+
+	auto nx = vx / len;
+	auto ny = vy / len;
+
+	auto plPed = PLAYER::PLAYER_PED_ID();
+	auto plPos = ENTITY::GET_ENTITY_COORDS(plPed, true);
+	auto spotX = plPos.x - nx * 10.0f;
+	auto spotY = plPos.y - ny * 10.0f;
+	auto spotZ = plPos.z + 10.0f;
+
+	float groundZ;
+	if (!MISC::GET_GROUND_Z_FOR_3D_COORD(spotX, spotY, spotZ, &groundZ, true, true))
+		return false;
+	if (groundZ == 0.0f)
+		return false;
+	if (7.0f < abs(plPos.z - groundZ))
+		return false;
+
+	groundZ += 1.0f;
+
+	auto rayX = plPos.x - nx * 15.0f;
+	auto rayY = plPos.y - ny * 15.0f;
+	auto hRaycast = SHAPETEST::START_EXPENSIVE_SYNCHRONOUS_SHAPE_TEST_LOS_PROBE(camPos.x, camPos.y, camPos.z, rayX, rayY, groundZ, 0x1FF, plPed, 7);
+
+	BOOL hits;
+	Vector3 hitRes;
+	Vector3 surfaceNormal;
+	Entity hitEntity;
+	if (SHAPETEST::GET_SHAPE_TEST_RESULT(hRaycast, &hits, &hitRes, &surfaceNormal, &hitEntity) == 2 && hits)
+		return false;
+
+	spot->x = spotX;
+	spot->y = spotY;
+	spot->z = groundZ;
+
+	return true;
+}
+
+bool NamedPedType1::TryCreate(Game::Redemption* redemption, NamedPed** res)
+{
+	auto plPed = PLAYER::PLAYER_PED_ID();
+	if (PED::IS_PED_IN_ANY_VEHICLE(plPed, true))
+		return false;
+
+	Vector3 spot = {};
+	if (!FindSpot(&spot))
+		return false;
+
+	auto ped = PED::CREATE_RANDOM_PED(spot.x, spot.y, spot.z);
+
+	*res = new NamedPedType1(ped, redemption->userId, redemption->userName);
+
+	Game::ShowNotification(redemption->userName + " prepared their camera");
+
+	return true;
 }

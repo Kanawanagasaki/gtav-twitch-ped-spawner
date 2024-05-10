@@ -48,12 +48,12 @@ void NamedPed::Tick()
 	if (PED::IS_PED_IN_ANY_VEHICLE(handle, true))
 		return;
 
-	auto plPos = ENTITY::GET_ENTITY_COORDS(PLAYER::PLAYER_PED_ID(), true);
+	auto cameraPos = CAM::GET_FINAL_RENDERED_CAM_COORD();
 	auto pedPos = ENTITY::GET_ENTITY_COORDS(handle, true);
 
-	auto vx = plPos.x - pedPos.x;
-	auto vy = plPos.y - pedPos.y;
-	auto vz = plPos.z - pedPos.z;
+	auto vx = cameraPos.x - pedPos.x;
+	auto vy = cameraPos.y - pedPos.y;
+	auto vz = cameraPos.z - pedPos.z;
 
 	auto distSq = vx * vx + vy * vy + vz * vz;
 
