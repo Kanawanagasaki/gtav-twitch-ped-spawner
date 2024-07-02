@@ -21,4 +21,6 @@ public class CustomRewardReq
     public int global_cooldown_seconds { get; set; } = 900;
 
     public bool should_redemptions_skip_request_queue { get; set; } = false;
+
+    public string? extra { get; set; }
 }

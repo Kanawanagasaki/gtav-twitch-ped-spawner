@@ -20,4 +20,6 @@ public class RewardEntity
     public bool IsUserInputRequired { get; set; }
     public string? Prompt { get; set; }
     public string? BackgroundColor { get; set; }
+
+    public string? Extra { get; set; }
 }

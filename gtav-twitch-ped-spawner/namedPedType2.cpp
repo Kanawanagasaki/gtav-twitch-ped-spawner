@@ -16,7 +16,7 @@ Hash NamedPedType2::GetRelationshipGroup()
 	return relationshipGroup;
 }
 
-NamedPedType2::NamedPedType2(Ped handle, std::string viewerId, std::string nickname) : NamedPed(handle, viewerId, nickname)
+NamedPedType2::NamedPedType2(Ped handle, std::string viewerId, std::string nickname, ENicknameVehicleRender vehRender) : NamedPed(handle, viewerId, nickname, vehRender)
 {
 	PED::SET_PED_RELATIONSHIP_GROUP_HASH(handle, GetRelationshipGroup());
 
@@ -266,6 +266,12 @@ bool NamedPedType2::FindSpot(Vector3* spot)
 
 bool NamedPedType2::TryCreate(Game::Redemption* redemption, NamedPed** res)
 {
+	auto vehRender = ENicknameVehicleRender::NEVER;
+	if (redemption->extra == "fivesec")
+		vehRender = ENicknameVehicleRender::FIVESEC;
+	else if (redemption->extra == "always")
+		vehRender = ENicknameVehicleRender::ALWAYS;
+
 	auto plPed = PLAYER::PLAYER_PED_ID();
 	if (PED::IS_PED_IN_ANY_VEHICLE(plPed, false))
 	{
@@ -278,7 +284,7 @@ bool NamedPedType2::TryCreate(Game::Redemption* redemption, NamedPed** res)
 
 			auto ped = PED::CREATE_RANDOM_PED(0, 0, 0);
 			PED::SET_PED_INTO_VEHICLE(ped, veh, i);
-			*res = new NamedPedType2(ped, redemption->userId, redemption->userName);
+			*res = new NamedPedType2(ped, redemption->userId, redemption->userName, vehRender);
 
 			Game::ShowNotification(redemption->userName + " ready to fight");
 
@@ -294,7 +300,7 @@ bool NamedPedType2::TryCreate(Game::Redemption* redemption, NamedPed** res)
 			return false;
 
 		auto ped = PED::CREATE_RANDOM_PED(spot.x, spot.y, spot.z);
-		*res = new NamedPedType2(ped, redemption->userId, redemption->userName);
+		*res = new NamedPedType2(ped, redemption->userId, redemption->userName, vehRender);
 
 		Game::ShowNotification(redemption->userName + " ready to fight");
 

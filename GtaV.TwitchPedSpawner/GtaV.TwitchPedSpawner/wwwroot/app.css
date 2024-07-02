@@ -23,6 +23,8 @@ html {
     background-size: 20px 20px;
 }
 
+select,
+textarea,
 input {
     display: block;
     width: 100%;
@@ -36,6 +38,13 @@ input {
     border-radius: .25rem;
     transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 }
+
+    select option {
+        margin: 40px;
+        background: rgba(0, 0, 0, 0.3);
+        color: black;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    }
 
 button {
     color: #f8f9fa;

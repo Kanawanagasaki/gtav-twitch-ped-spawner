@@ -10,4 +10,5 @@ public class Redemption
     public required string redeemed_at { get; init; }
 
     public ERewardType reward_type { get; set; }
+    public string? extra { get; set; }
 }

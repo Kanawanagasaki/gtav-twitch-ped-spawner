@@ -12,7 +12,7 @@ private:
 	int lastGroupResetTime = 0;
 
 public:
-	NamedPedType2(Ped handle, std::string viewerId, std::string nickname);
+	NamedPedType2(Ped handle, std::string viewerId, std::string nickname, ENicknameVehicleRender vehRender);
 
 	bool ShouldDelete() override;
 

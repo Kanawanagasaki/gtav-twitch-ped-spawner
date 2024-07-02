@@ -17,6 +17,7 @@ namespace Game
 		std::string userName;
 		std::string userInput;
 		int rewardType;
+		std::string extra;
 	};
 
 	void Process(Redemption* redemption);

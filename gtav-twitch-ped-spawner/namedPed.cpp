@@ -4,11 +4,12 @@
 
 #include <algorithm>
 
-NamedPed::NamedPed(Ped handle, std::string viewerId, std::string nickname)
+NamedPed::NamedPed(Ped handle, std::string viewerId, std::string nickname, ENicknameVehicleRender vehRender)
 {
 	this->handle = handle;
 	this->viewerId = viewerId;
 	this->nickname = nickname;
+	this->vehRender = vehRender;
 
 	auto model = ENTITY::GET_ENTITY_MODEL(handle);
 	Vector3 min;
@@ -16,6 +17,8 @@ NamedPed::NamedPed(Ped handle, std::string viewerId, std::string nickname)
 	MISC::GET_MODEL_DIMENSIONS(model, &min, &max);
 
 	modelHeight = max.z;
+
+	lastTimeOnFoot = MISC::GET_GAME_TIMER();
 }
 
 bool NamedPed::LoadAnimDict(std::string dict)
@@ -45,8 +48,20 @@ void NamedPed::Tick()
 {
 	if (!ENTITY::DOES_ENTITY_EXIST(handle))
 		return;
+
+	auto now = MISC::GET_GAME_TIMER();
 	if (PED::IS_PED_IN_ANY_VEHICLE(handle, true))
-		return;
+	{
+		if (CAM::GET_FOLLOW_VEHICLE_CAM_VIEW_MODE() != 4)
+		{
+			if (vehRender == ENicknameVehicleRender::NEVER)
+				return;
+			else if (vehRender == ENicknameVehicleRender::FIVESEC && 5000 < now - lastTimeOnFoot)
+				return;
+		}
+	}
+	else
+		lastTimeOnFoot = now;
 
 	auto cameraPos = CAM::GET_FINAL_RENDERED_CAM_COORD();
 	auto pedPos = ENTITY::GET_ENTITY_COORDS(handle, true);
@@ -61,16 +76,24 @@ void NamedPed::Tick()
 	{
 		auto distPercent = std::clamp((400.0f - distSq) / 400.0f, 0.0f, 1.0f);
 
-		float worldZ = pedPos.z + modelHeight + 0.45f - 0.15f * distPercent;
+		auto bonePos = ENTITY::GET_ENTITY_BONE_POSTION(handle, 0);
+		float worldZ = bonePos.z + modelHeight + 0.45f - 0.15f * distPercent;
+
+		if (CAM::GET_FOLLOW_VEHICLE_CAM_VIEW_MODE() == 4 && PED::IS_PED_IN_ANY_VEHICLE(handle, true))
+		{
+			bonePos = ENTITY::GET_ENTITY_BONE_POSTION(handle, PED::GET_PED_BONE_INDEX(handle, 31086));
+			worldZ = bonePos.z + 0.3f;
+		}
+
 		float screenX;
 		float screenY;
-		if (GRAPHICS::GET_SCREEN_COORD_FROM_WORLD_COORD(pedPos.x, pedPos.y, worldZ, &screenX, &screenY))
+		if (GRAPHICS::GET_SCREEN_COORD_FROM_WORLD_COORD(laggedTextX, laggedTextY, laggedTextZ, &screenX, &screenY))
 		{
 			auto camPos = CAM::GET_GAMEPLAY_CAM_COORD();
 
-			vx = camPos.x - pedPos.x;
-			vy = camPos.y - pedPos.y;
-			vz = camPos.z - pedPos.z;
+			vx = camPos.x - laggedTextX;
+			vy = camPos.y - laggedTextY;
+			vz = camPos.z - laggedTextZ;
 
 			distSq = vx * vx + vy * vy + vz * vz;
 
@@ -89,6 +112,10 @@ void NamedPed::Tick()
 
 			HUD::END_TEXT_COMMAND_DISPLAY_TEXT(screenX, screenY, 0);
 		}
+
+		laggedTextX = bonePos.x;
+		laggedTextY = bonePos.y;
+		laggedTextZ = worldZ;
 	}
 }
 

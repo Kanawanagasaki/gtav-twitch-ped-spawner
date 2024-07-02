@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-NamedPedType0::NamedPedType0(Ped handle, std::string viewerId, std::string nickname) : NamedPed(handle, viewerId, nickname)
+NamedPedType0::NamedPedType0(Ped handle, std::string viewerId, std::string nickname) : NamedPed(handle, viewerId, nickname, ENicknameVehicleRender::NEVER)
 {
 	if (getGameVersion() < 80) // idk what the update number is for CASINO HEIST. The latest GTA V update number (at the time of writing) is 86.
 	{
@@ -22,6 +22,8 @@ NamedPedType0::NamedPedType0(Ped handle, std::string viewerId, std::string nickn
 		animDict = "anim@amb@waving@male";
 		animName = "ground_wave";
 	}
+
+	TASK::TASK_FOLLOW_TO_OFFSET_OF_ENTITY(handle, PLAYER::PLAYER_PED_ID(), 0.0f, 0.0f, 0.0f, 2.0f, -1, 5.0f, true);
 
 	Hash relationshipGroup;
 	PED::ADD_RELATIONSHIP_GROUP("_NAMED_PED", &relationshipGroup);
@@ -57,7 +59,7 @@ void NamedPedType0::Tick()
 	if (!LoadAnimDict(animDict))
 		return;
 
-	if (distSq < 100.0f)
+	if (distSq < 50.0f)
 	{
 		if (!isNextToPlayer)
 		{
@@ -82,9 +84,11 @@ void NamedPedType0::Tick()
 		if (!ENTITY::IS_ENTITY_PLAYING_ANIM(handle, animDict.c_str(), animName.c_str(), 3))
 			TASK::TASK_PLAY_ANIM(handle, animDict.c_str(), animName.c_str(), 8.0f, -8.0f, -1, 1, 0.0f, 0, 0, 0);
 	}
-	else if (isNextToPlayer && 150.0f < distSq)
+	else if (isNextToPlayer && 225.0f < distSq)
 	{
 		TASK::CLEAR_PED_TASKS(handle);
+
+		TASK::TASK_FOLLOW_TO_OFFSET_OF_ENTITY(handle, plPed, 0.0f, 0.0f, 0.0f, 2.0f, -1, 5.0f, true);
 
 		isNextToPlayer = false;
 	}
@@ -133,6 +137,8 @@ bool NamedPedType0::TryCreate(Game::Redemption* redemption, NamedPed** res)
 		float screenY;
 		if (!GRAPHICS::GET_SCREEN_COORD_FROM_WORLD_COORD(pedPos.x, pedPos.y, worldZ, &screenX, &screenY))
 			continue;
+		if (screenX < 0.1f || 0.9f < screenX || screenY < 0.1f || 0.9f < screenY)
+			return false;
 
 		*res = new NamedPedType0(ped, redemption->userId, redemption->userName);
 

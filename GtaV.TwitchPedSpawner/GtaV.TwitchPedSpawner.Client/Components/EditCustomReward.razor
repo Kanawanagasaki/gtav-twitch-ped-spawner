@@ -13,61 +13,80 @@
     <div class="root">
         <div class="panel">
             <h2>
-                Edit @rewardType
+                Edit: <b>Twitch NPC Spawner, @rewardType</b>
             </h2>
 
-            <div>Title</div>
-            <input type="text" @bind=@(_req.title) />
+            <div class="essentials">
+                <div>Title:</div>
+                <input type="text" @bind=@(_req.title) />
 
-            <div>Cost</div>
-            <input type="number" @bind=@(_req.cost) />
+                <div>Cost:</div>
+                <input type="number" @bind=@(_req.cost) />
 
-            <div>User input</div>
-            <button @onclick=@(()=>_req.is_user_input_required = !_req.is_user_input_required)>
-                @(_req.is_user_input_required ? "Disable" : "Enable")
-            </button>
-            @if(_req.is_user_input_required)
-            {
-                <div>Prompt</div>
-                <input type="text" @bind=@(_req.prompt) />
-            }
+                <div>Description:</div>
+                <textarea type="text" maxlength="200" rows="1" @bind=@(_req.prompt) />
 
-            <div>Background color</div>
-            <input type="color" @bind=@(_req.background_color) />
+                @if (Reward.Type == Shared.ERewardType.Companion)
+                {
+                    <div>Nickname rendering in vehicle:</div>
+                    <select @bind=@(_req.extra)>
+                        <option value="">Never</option>
+                        <option value="fivesec">5 Seconds after entering vehicle</option>
+                        <option value="always">Always</option>
+                    </select>
+                }
 
-            <div>Global cooldown</div>
-            <button @onclick=@(()=>_req.is_global_cooldown_enabled = !_req.is_global_cooldown_enabled)>
-                @(_req.is_global_cooldown_enabled ? "Disable" : "Enable")
-            </button>
-            @if (_req.is_global_cooldown_enabled)
-            {
-                <div>Global cooldown seconds</div>
-                <input type="number" @bind=@(_req.global_cooldown_seconds) />
-            }
+                <div>Background color</div>
+                <input type="color" @bind=@(_req.background_color) />
 
-            <div>Max per stream</div>
-            <button @onclick=@(()=>_req.is_max_per_stream_enabled = !_req.is_max_per_stream_enabled)>
-                @(_req.is_max_per_stream_enabled ? "Disable" : "Enable")
-            </button>
-            @if (_req.is_max_per_stream_enabled)
-            {
-                <input type="number" @bind=@(_req.max_per_stream) />
-            }
+                <hr />
 
-            <div>Max per user per stream </div>
-            <button @onclick=@(()=>_req.is_max_per_user_per_stream_enabled = !_req.is_max_per_user_per_stream_enabled)>
-                @(_req.is_max_per_user_per_stream_enabled ? "Disable" : "Enable")
-            </button>
-            @if (_req.is_max_per_user_per_stream_enabled)
-            {
-                <input type="number" @bind=@(_req.max_per_user_per_stream) />
-            }
+                <div>Global cooldown</div>
+                <select @onchange=@((e) =>_req.is_global_cooldown_enabled = e.Value?.ToString() == "True")>
+                    <option value="True" selected=@(_req.is_global_cooldown_enabled)>Enabled</option>
+                    <option value="False" selected=@(!_req.is_global_cooldown_enabled)>Disabled</option>
+                </select>
+                @if (_req.is_global_cooldown_enabled)
+                {
+                    <div>Global cooldown seconds</div>
+                    <input type="number" @bind=@(_req.global_cooldown_seconds) />
+                }
 
-            <hr />
+                <hr />
 
-            <button @onclick=@Save>
-                Save
-            </button>
+                <div>Max per stream</div>
+                <select @onchange=@((e) =>_req.is_max_per_stream_enabled = e.Value?.ToString() == "True")>
+                    <option value="True" selected=@(_req.is_max_per_stream_enabled)>Enabled</option>
+                    <option value="False" selected=@(!_req.is_max_per_stream_enabled)>Disabled</option>
+                </select>
+                @if (_req.is_max_per_stream_enabled)
+                {
+                    <div></div>
+                    <input type="number" @bind=@(_req.max_per_stream) />
+                }
+
+                <hr />
+
+                <div>Max per user per stream </div>
+                <select @onchange=@((e) =>_req.is_max_per_user_per_stream_enabled = e.Value?.ToString() == "True")>
+                    <option value="True" selected=@(_req.is_max_per_user_per_stream_enabled)>Enabled</option>
+                    <option value="False" selected=@(!_req.is_max_per_user_per_stream_enabled)>Disabled</option>
+                </select>
+                @if (_req.is_max_per_user_per_stream_enabled)
+                {
+                    <div></div>
+                    <input type="number" @bind=@(_req.max_per_user_per_stream) />
+                }
+            </div>
+
+            <div class="footer-buttons">
+                <button class="danger" @onclick=@Cancel>
+                    Cancel
+                </button>
+                <button @onclick=@Save>
+                    Save
+                </button>
+            </div>
         </div>
     </div>
 }

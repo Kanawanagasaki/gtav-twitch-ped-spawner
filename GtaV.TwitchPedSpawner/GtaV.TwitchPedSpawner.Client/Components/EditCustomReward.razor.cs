@@ -42,7 +42,8 @@ public partial class EditCustomReward : ComponentBase
             max_per_user_per_stream = Reward.TwitchModel.max_per_user_per_stream_setting?.max_per_user_per_stream ?? 1,
             is_global_cooldown_enabled = Reward.TwitchModel.global_cooldown_setting?.is_enabled ?? false,
             global_cooldown_seconds = Reward.TwitchModel.global_cooldown_setting?.global_cooldown_seconds ?? 90,
-            should_redemptions_skip_request_queue = Reward.TwitchModel.should_redemptions_skip_request_queue
+            should_redemptions_skip_request_queue = Reward.TwitchModel.should_redemptions_skip_request_queue,
+            extra = Reward.Extra
         };
     }
 
@@ -63,5 +64,10 @@ public partial class EditCustomReward : ComponentBase
         {
             _isSaving = false;
         }
+    }
+
+    private void Cancel()
+    {
+        ControlPanel.CancelSave();
     }
 }

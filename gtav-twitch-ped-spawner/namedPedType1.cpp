@@ -4,7 +4,7 @@
 #include <vector>
 #include <cmath>
 
-NamedPedType1::NamedPedType1(Ped handle, std::string viewerId, std::string nickname) : NamedPed(handle, viewerId, nickname)
+NamedPedType1::NamedPedType1(Ped handle, std::string viewerId, std::string nickname) : NamedPed(handle, viewerId, nickname, ENicknameVehicleRender::NEVER)
 {
 	if (getGameVersion() < 80) // idk what the update number is for CASINO HEIST. The latest GTA V update number (at the time of writing) is 86.
 	{

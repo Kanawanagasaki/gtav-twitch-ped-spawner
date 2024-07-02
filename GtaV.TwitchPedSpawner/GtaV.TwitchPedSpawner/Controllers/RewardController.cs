@@ -50,9 +50,9 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
                 TwitchId = null,
                 Title = type switch
                 {
-                    ERewardType.PedReplacement => "NPC Spawner: Wave hello",
-                    ERewardType.Paparazzi => "NPC Spawner: Paparazzi",
-                    ERewardType.Companion => "NPC Spawner: Companion",
+                    ERewardType.PedReplacement => "GTAV NPC Spawner: Wave hello",
+                    ERewardType.Paparazzi => "GTAV NPC Spawner: Paparazzi",
+                    ERewardType.Companion => "GTAV NPC Spawner: Companion",
                     _ => "Spawn an NPC named after you in game"
                 },
                 Cost = type switch
@@ -199,6 +199,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
                 Id = localReward.Id,
                 Type = localReward.Type,
                 IsCreated = localReward.IsCreated,
+                Extra = localReward.Extra,
                 TwitchModel = remoteReward
             };
             rewards.Add(reward);
@@ -249,6 +250,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
         localReward.IsUserInputRequired = remoteReward.is_user_input_required;
         localReward.Prompt = remoteReward.prompt;
         localReward.BackgroundColor = remoteReward.background_color;
+        localReward.Extra = req.extra;
 
         await _db.SaveChangesAsync();
 
@@ -257,6 +259,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
             Id = localReward.Id,
             IsCreated = localReward.IsCreated,
             Type = localReward.Type,
+            Extra = localReward.Extra,
             TwitchModel = remoteReward
         };
 
@@ -305,6 +308,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
             Id = localReward.Id,
             IsCreated = localReward.IsCreated,
             Type = localReward.Type,
+            Extra = localReward.Extra,
             TwitchModel = remoteRewardRes.data[0]
         };
 
@@ -339,6 +343,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
             Id = localReward.Id,
             IsCreated = localReward.IsCreated,
             Type = localReward.Type,
+            Extra = localReward.Extra,
             TwitchModel = null
         };
 
@@ -370,6 +375,7 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
             if (res is not null && res.IsSuccessStatusCode && 0 < res.data.Length)
             {
                 res.data[0].reward_type = localReward.Type;
+                res.data[0].extra = localReward.Extra ?? string.Empty;
                 redemptions.Add(res.data[0]);
             }
         }
@@ -398,8 +404,34 @@ public class RewardController(JwtService _jwtService, TwitchApiClient _twitchApi
         var rt = (ERewardType)rewardType;
         var rewards = await _db.Rewards.Where(x => x.UserId == user.Id && x.Type == rt && x.IsCreated).ToArrayAsync();
         foreach (var reward in rewards)
+        {
             if (reward.TwitchId is not null)
+            {
+                var redemption = await _twitchApi.GetRedemption(user, reward.TwitchId, redemptionId);
                 await _twitchApi.UpdateRedemptionStatus(user, reward.TwitchId, redemptionId, TwitchApiClient.ERedemptionStatus.FULFILLED);
+
+                if (_conf["RewardReport:ChannelTwitchId"] == user.TwitchId
+                    && !string.IsNullOrWhiteSpace(_conf["RewardReport:Endpoint"])
+                    && redemption is not null
+                    && redemption.IsSuccessStatusCode
+                    && 0 < redemption.data.Length)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        using var body = JsonContent.Create(new
+                        {
+                            type = "twitch-redemption",
+                            client = _conf["RewardReport:Client"],
+                            redemption_type = "gtav-twitch-ped-spawner",
+                            redemption_name = reward.Title,
+                            user = redemption.data[0].user_login
+                        });
+                        using var http = new HttpClient() { Timeout = TimeSpan.FromSeconds(7.5d) };
+                        await http.PostAsync(_conf["RewardReport:Endpoint"]!, body);
+                    });
+                }
+            }
+        }
 
         return StatusCode(StatusCodes.Status204NoContent);
     }

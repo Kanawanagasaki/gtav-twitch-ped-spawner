@@ -23,6 +23,8 @@ namespace Game
 	std::vector<Ped> pedsToDespawn = {};
 	bool shouldDespawnAllPeds = false;
 
+	int playerDeathTime = 0;
+
 	void Process(Redemption* toProcess)
 	{
 		if (redemptions.contains(toProcess->rewardType))
@@ -88,7 +90,10 @@ namespace Game
 				companions.insert(ped);
 		}
 
-		if (!HUD::IS_RADAR_HIDDEN())
+		int now = MISC::GET_GAME_TIMER();
+		if (ENTITY::IS_ENTITY_DEAD(plPed, false))
+			playerDeathTime = now;
+		if (!HUD::IS_RADAR_HIDDEN() && 15000 < now - playerDeathTime)
 		{
 			for (int i = 0; i <= 2; i++)
 			{

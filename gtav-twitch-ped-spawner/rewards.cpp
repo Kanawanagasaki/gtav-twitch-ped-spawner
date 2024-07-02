@@ -178,7 +178,8 @@ namespace Rewards
 				.userLogin = item.has_string_field(U("user_login")) ? to_utf8string(item[U("user_login")].as_string()) : "",
 				.userName = item.has_string_field(U("user_name")) ? to_utf8string(item[U("user_name")].as_string()) : "",
 				.userInput = item.has_string_field(U("user_input")) ? to_utf8string(item[U("user_input")].as_string()) : "",
-				.rewardType = item.has_integer_field(U("reward_type")) ? item[U("reward_type")].as_integer() : 0
+				.rewardType = item.has_integer_field(U("reward_type")) ? item[U("reward_type")].as_integer() : 0,
+				.extra = item.has_string_field(U("extra")) ? to_utf8string(item[U("extra")].as_string()) : ""
 			};
 
 			Game::Process(redemption);

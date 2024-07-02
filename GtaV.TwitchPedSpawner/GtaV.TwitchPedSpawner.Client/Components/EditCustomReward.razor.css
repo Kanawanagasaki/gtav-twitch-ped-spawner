@@ -1,4 +1,4 @@
-﻿h2 {
+﻿﻿h2 {
     margin-top: 0;
 }
 
@@ -17,7 +17,6 @@
     display: flex;
     flex-direction: column;
     gap: .5rem;
-
     padding: 1rem;
     width: 100%;
     max-width: 1000px;
@@ -26,12 +25,30 @@
     box-shadow: rgba(0, 0, 0, 0.25) 0px 14px 28px, rgba(0, 0, 0, 0.22) 0px 10px 10px;
 }
 
+.essentials {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: .75rem;
+    padding: 0 .75rem;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
 input[type=color] {
     padding: 0 .1rem;
     border: none;
 }
 
 hr {
+    grid-column: 1 / span 2;
     width: 100%;
     border-color: #333;
+}
+
+.footer-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+    margin-top: 1rem;
 }

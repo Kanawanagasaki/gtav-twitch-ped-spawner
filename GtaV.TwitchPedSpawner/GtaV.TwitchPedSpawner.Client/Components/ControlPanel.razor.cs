@@ -225,6 +225,12 @@ public partial class ControlPanel : ComponentBase
         }
     }
 
+    public void CancelSave()
+    {
+        _editing = null;
+        StateHasChanged();
+    }
+
     public async Task KickPed(long handle)
     {
         using var http = new HttpClient();
