@@ -23,7 +23,7 @@ namespace Game
 	std::vector<Ped> pedsToDespawn = {};
 	bool shouldDespawnAllPeds = false;
 
-	int playerDeathTime = 0;
+	int cooldown = 0;
 
 	void Process(Redemption* toProcess)
 	{
@@ -91,9 +91,11 @@ namespace Game
 		}
 
 		int now = MISC::GET_GAME_TIMER();
-		if (ENTITY::IS_ENTITY_DEAD(plPed, false))
-			playerDeathTime = now;
-		if (!HUD::IS_RADAR_HIDDEN() && 15000 < now - playerDeathTime)
+		if (ENTITY::IS_ENTITY_DEAD(plPed, false)
+			|| PLAYER::IS_PLAYER_BEING_ARRESTED(PLAYER::PLAYER_ID(), false)
+			|| HUD::IS_RADAR_HIDDEN())
+			cooldown = now;
+		if (15000 < now - cooldown)
 		{
 			for (int i = 0; i <= 2; i++)
 			{

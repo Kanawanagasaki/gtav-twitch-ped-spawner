@@ -71,13 +71,14 @@ void NamedPed::Tick()
 	auto vz = cameraPos.z - pedPos.z;
 
 	auto distSq = vx * vx + vy * vy + vz * vz;
+	const float maxDistSq = 40 * 40;
 
-	if (distSq < 400.0f)
+	if (distSq < maxDistSq)
 	{
-		auto distPercent = std::clamp((400.0f - distSq) / 400.0f, 0.0f, 1.0f);
+		auto distPercent = std::clamp((maxDistSq - distSq) / maxDistSq, 0.0f, 1.0f);
 
 		auto bonePos = ENTITY::GET_ENTITY_BONE_POSTION(handle, 0);
-		float worldZ = bonePos.z + modelHeight + 0.45f - 0.15f * distPercent;
+		float worldZ = bonePos.z + modelHeight + 0.45f - 0.2f * distPercent * distPercent;
 
 		if (CAM::GET_FOLLOW_VEHICLE_CAM_VIEW_MODE() == 4 && PED::IS_PED_IN_ANY_VEHICLE(handle, true))
 		{
@@ -91,14 +92,14 @@ void NamedPed::Tick()
 		{
 			auto camPos = CAM::GET_GAMEPLAY_CAM_COORD();
 
-			vx = camPos.x - laggedTextX;
-			vy = camPos.y - laggedTextY;
-			vz = camPos.z - laggedTextZ;
+			vx = camPos.x - pedPos.x;
+			vy = camPos.y - pedPos.y;
+			vz = camPos.z - pedPos.z;
 
 			distSq = vx * vx + vy * vy + vz * vz;
 
-			auto opacity = std::clamp((100.0f - (distSq - 300.0f)) / 100.0f, 0.0f, 1.0f);
-			auto scale = 0.175f + distPercent * 0.075f;
+			auto opacity = std::clamp((maxDistSq - distSq) / 225.0f, 0.0f, 1.0f);
+			auto scale = 0.175f + distPercent * distPercent * 0.075f;
 
 			HUD::BEGIN_TEXT_COMMAND_DISPLAY_TEXT("STRING");
 			HUD::ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(nickname.c_str());
